@@ -8,15 +8,20 @@ from chatbot.database import DatabaseManager
 # Load environment variables from .env for local development
 load_dotenv()
 
-# Support Streamlit Cloud secrets
-try:
-    import streamlit as st
-    if hasattr(st, 'secrets'):
-        # Running on Streamlit Cloud, use secrets
-        for key in st.secrets:
-            os.environ[key] = st.secrets[key]
-except:
-    pass
+# Support Streamlit Cloud secrets - import only when needed
+def _load_streamlit_secrets():
+    try:
+        import streamlit as st
+        if hasattr(st, 'secrets'):
+            # Running on Streamlit Cloud, use secrets
+            for key in st.secrets:
+                os.environ[key] = st.secrets[key]
+    except:
+        pass
+
+# Try to load secrets if not already in environment
+if not os.getenv("AZURE_OPENAI_API_KEY"):
+    _load_streamlit_secrets()
 
 # Force stdout to flush immediately for debugging
 sys.stdout.reconfigure(line_buffering=True)
@@ -209,6 +214,13 @@ Be concise and helpful."""
             {"role": "system", "content": f"""You are a helpful AI assistant with access to a database.
 
 {self.db_context}
+
+IMPORTANT:
+- Answer questions conversationally in natural language
+- DO NOT return SQL code in your response
+- DO NOT show queries to the user
+- Explain what data you have access to
+- Help users formulate better questions
 
 You can help users understand the data and answer questions."""}
         ] + self.conversation_history
